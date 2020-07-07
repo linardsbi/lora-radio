@@ -1,0 +1,22 @@
+{
+  "name": "Lora Radio",
+  "version": "0.1",
+  "authors": {
+    "name": "Linards Biezbardis",
+    "email": "kaktoss@inbox.lv"
+  },
+  "description": "Yet another LoRa library",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/linardsbi/lora-radio"
+  },
+  "build": {
+    "flags": "-std=c++2a",
+    "unflags": "-std=c++11"
+  },
+  "dependencies": {
+        "lib-from-repo": "linardsbi/logger",
+        "EspSoftwareSerial": "^6.8.5"
+  },
+  "platforms": "espressif8266"
+}
