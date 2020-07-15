@@ -1,6 +1,7 @@
 #include "./E32-100.hpp"
 #include <Logger.hpp>
 #include <vector>
+#include <iterator>
 
 auto E32_100::getVersion() -> ModuleVersion {
   changeMode(Mode::SLEEP);
@@ -14,7 +15,7 @@ auto E32_100::getVersion() -> ModuleVersion {
 }
 
 template <WritableContainerType buffer>
-[[maybe_unused]] auto E32_100::readIntoBuffer(buffer &buf) -> ModuleStatus {
+auto E32_100::readIntoBuffer(buffer &buf) -> ModuleStatus {
   const auto totalBytes = serial->available();
 
   if (totalBytes == 0)
@@ -43,7 +44,8 @@ auto E32_100::readParameters() -> ModuleParameters {
 
 auto E32_100::changeMode(Mode m) -> ModuleStatus {
 
-  if (m == currentMode) return ModuleStatus::OK;
+  if (m == currentMode)
+    return ModuleStatus::OK;
 
   switch (m) {
   case Mode::NORMAL:
@@ -109,7 +111,7 @@ auto E32_100::waitUntilFinished() -> ModuleStatus {
 }
 
 template <WritableType... Args>
-  auto E32_100::write(const Args... args) -> ModuleStatus {
+auto E32_100::write(const Args... args) -> ModuleStatus {
   if (!serial->availableForWrite())
     return ModuleStatus::NOT_WRITABLE;
 
@@ -132,20 +134,3 @@ auto E32_100::write(const Args... args) -> ModuleStatus {
   return ModuleStatus::OK;
 }
 
-auto E32_100::send(const uint8_t addh, const uint8_t addl, const uint8_t chan,
-                   std::string_view message) -> ModuleStatus {
-
-  Logger::print(Serial, "Sending ", message.data(), " to ", addh, ' ', addl, ' ', chan,
-                '\n');
-
-  changeMode(Mode::NORMAL);
-
-  return write(std::array<uint8_t, 3>{addh, addl, chan}, message);
-}
-
-auto E32_100::send(std::string_view message) -> ModuleStatus {
-  Logger::print(Serial, "Sending ", message.data(), " transparently\n");
-  changeMode(Mode::NORMAL);
-  return (serial->write(message.data(), message.size()) == 0) ? ModuleStatus::EMPTY_BUFFER_WRITTEN
-                                       : ModuleStatus::OK;
-}
