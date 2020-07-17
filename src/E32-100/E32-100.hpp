@@ -1,10 +1,9 @@
 #include "../ModuleBase.hpp"
 #include "Defaults.hpp"
 #include <Logger.hpp>
-#include <functional>
-#include <iterator>
-#include <string_view>
 #include <cstring>
+#include <functional>
+#include <string_view>
 
 #ifndef E32_100_H
 #define E32_100_H
@@ -26,24 +25,19 @@ template <typename T> concept WritableContainerType = requires(T t) {
   sizeof(typename T::value_type) == 1;
 };
 
-template <typename T> constexpr bool IsMsgContainer = requires {
-  std::is_same_v<std::basic_string_view<typename T::value_type>,
-                 typename T::value_type>;
-};
-
 class E32_100 : public ModuleBase {
 public:
-  constexpr E32_100(const ModulePorts &ports,
-                    const ModuleParameters &params = E32::E32_DEFAULTS)
+  E32_100(const ModulePorts &ports,
+          const ModuleParameters &params = E32::E32_DEFAULTS)
       : ModuleBase(ports, params) {}
 
-  //   using FuncP = std::function<void(void)>;
-
-  //   inline void setOnReceive(const FuncP &callback) {
-  //     onReceiveMessage = callback;
-  //   }
-  //   inline void setOnTransmit(const FuncP &callback) { onSendMessage =
-  //   callback; }
+  void onReceive(void (*callback)()) {
+    if (!serial) {
+      Logger::print(Serial, F("Serial interface not yet started\n"));
+      return;
+    }
+    attachInterrupt(digitalPinToInterrupt(ports.AUX), callback, RISING);
+  }
 
   [[nodiscard]] virtual auto getVersion() -> ModuleVersion;
 
@@ -83,8 +77,11 @@ public:
 
     changeMode(Mode::NORMAL);
 
-    write(addh, addl, chan);
-    serial->write(message, std::size(message));
+    // write(addh, addl, chan);
+    serial->write(addh);
+    serial->write(addl);
+    serial->write(chan);
+    serial->write(message, strlen(std::forward<T>(message)));
 
     return ModuleStatus::OK;
   }
@@ -100,15 +97,17 @@ public:
   template <WritableType T> auto send(T message) -> ModuleStatus {
     Logger::print(Serial, "Sending ", message, " transparently\n");
     changeMode(Mode::NORMAL);
-    return (serial->write(std::forward<T>(message)) == 0) ? ModuleStatus::EMPTY_BUFFER_WRITTEN
-                                         : ModuleStatus::OK;
+    return (serial->write(std::forward<T>(message)) == 0)
+               ? ModuleStatus::EMPTY_BUFFER_WRITTEN
+               : ModuleStatus::OK;
   }
 
   template <WritableArrayType T> auto send(T message) -> ModuleStatus {
     Logger::print(Serial, "Sending ", " transparently\n");
     changeMode(Mode::NORMAL);
 
-    return (serial->write(std::forward<T>(message), strlen(std::forward<T>(message))) == 0)
+    return (serial->write(std::forward<T>(message),
+                          strlen(std::forward<T>(message))) == 0)
                ? ModuleStatus::EMPTY_BUFFER_WRITTEN
                : ModuleStatus::OK;
   }
@@ -117,12 +116,28 @@ public:
       -> ModuleStatus;
 
   template <WritableContainerType buffer>
-  auto readIntoBuffer(buffer &buf) -> ModuleStatus;
+  auto readIntoBuffer(buffer &buf) -> ModuleStatus {
+    const auto totalBytes = serial->available();
+
+    if (totalBytes == 0)
+      return ModuleStatus::EMPTY_RETURN_BUFFER;
+
+    Logger::print(Serial, F("Bytes in serial buf: "), totalBytes, '\n');
+
+    std::generate(buf.begin(), buf.end(), [this]() { return serial->read(); });
+
+    return ModuleStatus::OK;
+  }
+
+  [[nodiscard]] auto available() { return serial->available(); }
+
+  void switchToNormal() { changeMode(Mode::NORMAL); }
+
+  [[nodiscard]] constexpr auto getCurrentMode() -> bool const {
+    return static_cast<uint8_t>(currentMode);
+  }
 
 private:
-  //   FuncP onReceiveMessage{};
-  //   FuncP onSendMessage{};
-
   enum class Mode : uint8_t {
     NORMAL,
     WAKEUP,
@@ -137,10 +152,28 @@ private:
   auto resetModule() -> ModuleStatus;
 
   template <WritableType... Args>
-  auto write(const Args... args) -> ModuleStatus;
+  auto write(const Args... args) -> ModuleStatus {
+    if (!serial->availableForWrite())
+      return ModuleStatus::NOT_WRITABLE;
+
+    (serial->write(args), ...);
+
+    waitUntilFinished();
+
+    return ModuleStatus::OK;
+  }
 
   template <WritableContainerType... Args>
-  auto write(const Args... args) -> ModuleStatus;
+  auto write(const Args... args) -> ModuleStatus {
+    if (!serial->availableForWrite())
+      return ModuleStatus::NOT_WRITABLE;
+
+    (serial->write(args.data(), args.size()), ...);
+
+    waitUntilFinished();
+
+    return ModuleStatus::OK;
+  }
 
   auto waitUntilFinished() -> ModuleStatus;
 };

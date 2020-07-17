@@ -1,5 +1,5 @@
-#include "../LoraRadio.hpp"
 #include <Logger.hpp>
+#include <LoraRadio.hpp>
 
 E32_100 radio({
     .RX = D2,

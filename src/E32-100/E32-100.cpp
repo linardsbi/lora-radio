@@ -14,20 +14,6 @@ auto E32_100::getVersion() -> ModuleVersion {
   return {buf[0], buf[1], buf[2], buf[3]};
 }
 
-template <WritableContainerType buffer>
-auto E32_100::readIntoBuffer(buffer &buf) -> ModuleStatus {
-  const auto totalBytes = serial->available();
-
-  if (totalBytes == 0)
-    return ModuleStatus::EMPTY_RETURN_BUFFER;
-
-  Logger::print(Serial, F("Bytes in serial buf: "), totalBytes, '\n');
-
-  std::generate(buf.begin(), buf.end(), [this]() { return serial->read(); });
-
-  return ModuleStatus::OK;
-}
-
 constexpr auto E32_100::getParameters() -> ModuleParameters const {
   return parameters;
 }
@@ -108,29 +94,5 @@ auto E32_100::waitUntilFinished() -> ModuleStatus {
     delay(E32::DEFAULT_DELAY);
   }
   return (isBusy()) ? ModuleStatus::JOB_TIMEOUT : ModuleStatus::OK;
-}
-
-template <WritableType... Args>
-auto E32_100::write(const Args... args) -> ModuleStatus {
-  if (!serial->availableForWrite())
-    return ModuleStatus::NOT_WRITABLE;
-
-  (serial->write(args), ...);
-
-  waitUntilFinished();
-
-  return ModuleStatus::OK;
-}
-
-template <WritableContainerType... Args>
-auto E32_100::write(const Args... args) -> ModuleStatus {
-  if (!serial->availableForWrite())
-    return ModuleStatus::NOT_WRITABLE;
-
-  (serial->write(args.data(), args.size()), ...);
-
-  waitUntilFinished();
-
-  return ModuleStatus::OK;
 }
 
