@@ -1,10 +1,7 @@
-#ifndef _HOME_HVS_DOCUMENTS_PLATFORMIO_PROJECTS_LORA_RADIO_LIB_LORARADIO_E32_100_DEFAULTS_HPP
-#define _HOME_HVS_DOCUMENTS_PLATFORMIO_PROJECTS_LORA_RADIO_LIB_LORARADIO_E32_100_DEFAULTS_HPP
-
-#include "../ModuleStructBase/ModuleStructBase.hpp"
+#pragma once
 
 using uint8_t = unsigned char;
-namespace E32 {
+
 constexpr uint8_t HEAD_PWD_SAVE = 0xC0;
 constexpr uint8_t HEAD_PWD_DEL = 0xC2;
 
@@ -52,18 +49,5 @@ constexpr uint8_t POWER_17DB = 0b00000001;
 constexpr uint8_t POWER_14DB = 0b00000010;
 constexpr uint8_t POWER_10DB = 0b00000011;
 
-constexpr ModuleParameters E32_DEFAULTS{
-    .HEAD = HEAD_PWD_SAVE,
-    .ADDH = 0x0,
-    .ADDL = 0x0,
-    .SPED = PARITY_8N1 ^ UART_RATE_9600 ^ DATA_RATE_2P4,
-    .CHAN = CHANNEL_868,
-    .OPTIONS = CLEAR_TRANSMISSION ^ IO_DRIVE_PP ^ WAKEUP_TIME_250 ^ FEC_ON ^
-               POWER_17DB,
-};
-
 constexpr int DEFAULT_DELAY = 50; // milliseconds
 constexpr int DEFAULT_TIMEOUT = 2000 / DEFAULT_DELAY; // = # of iterations
-
-} // namespace E32
-#endif
